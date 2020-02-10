@@ -1,5 +1,5 @@
 ---
-title: "R Notebook"
+title: "Data visualization with R"
 output: 
   html_notebook:
         number_sections: true
@@ -111,29 +111,16 @@ Notice that the last line is split into 3 lines, all indended nicely.
 
 > Use ridgeline plot to explore the regional distribution of Illiteracy for state.x77 and state.region data sets and interpret your figure.
 
-## Maps are also easy
-
-```{r }
-#install.packages(c("maps","mapproj"))
+## Boxplot with jitter shows the raw data points
+```{r}
 library(ggplot2)
-library(maps)
-sta$region <- tolower(state.name)  # Create new character vector with lowercase states names
-states <- map_data("state")        # Extract state data
-map <- merge(states, sta, by = "region", all.x = T)  # Merge states and state.x77 data
-map <- map[order(map$order), ]
-ggplot(map, aes(x = long, y = lat, group = group)) +  
-  geom_polygon(aes(fill = Murder)) +   
-  geom_path() + 
-  scale_fill_gradientn(colours = rev(heat.colors(10))) +
-  coord_map() +
-  labs(x = "Longitude", y = "Latitude") +
-  guides(fill = guide_legend(title = "Murder Rate")) +  
-  theme(plot.title = element_text(hjust = 0.5))
+ggplot(sta, aes(x = Region, y = Frost)) + 
+  geom_boxplot()+
+  geom_jitter(position=position_jitter(0.2))
 ```
-
 **Challenge**
 
-> Similar to above, create a new code chuck below to use choropleth map to obtain the Illiteracy map in state.x77 data set and give a brief interpretation. Hint: You can combine state.abb to state.x77 or use the row names of state.x77 data set directly. 
+>  Change it to visualize income. Fill the plain boxplots with 4 different colors for the 4 boxes.
 
 
 ```{r}
@@ -175,3 +162,45 @@ Heatmap(st.matrix,
 **Challenge**
 
 > Add a annotation to the right of the heat map. Using points to represents income for 50 states. Hint: Make another column annotation function and then use right_annotation
+
+
+
+## Maps are also easy
+
+```{r }
+#install.packages(c("maps","mapproj"))
+library(ggplot2)
+library(maps)
+sta$region <- tolower(state.name)  # Create new character vector with lowercase states names
+states <- map_data("state")        # Extract state data
+map <- merge(states, sta, by = "region", all.x = T)  # Merge states and state.x77 data
+map <- map[order(map$order), ]
+ggplot(map, aes(x = long, y = lat, group = group)) +  
+  geom_polygon(aes(fill = Murder)) +   
+  geom_path() + 
+  scale_fill_gradientn(colours = rev(heat.colors(10))) +
+  coord_map() +
+  labs(x = "Longitude", y = "Latitude") +
+  guides(fill = guide_legend(title = "Murder Rate")) +  
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+**Challenge**
+
+> Similar to above, create a new code chuck below to use choropleth map to obtain the Illiteracy map in state.x77 data set and give a brief interpretation. Hint: You can combine state.abb to state.x77 or use the row names of state.x77 data set directly. 
+
+## Interactive plots with plotly 
+
+```{r}
+library(plotly)
+p <- ggplot(sta, aes(x = Illiteracy, y = Murder)) + 
+  geom_point(aes(color = Region)) + 
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("Murder rate Vs Illiteracy") +
+  labs(y="Murders per 100,000", x="Illiteracy rate 1970", caption="Source: R") +
+  annotate("text",  x= 2.5, y = 2, 
+           label = paste("R=",round(cor(sta$Murder, sta$Illiteracy), 2))) 
+
+ggplotly(p, )
+```
+

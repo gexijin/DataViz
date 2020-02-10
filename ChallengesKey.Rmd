@@ -79,3 +79,12 @@ Heatmap(st.matrix,
         right_annotation = row_ha2,
         top_annotation = col_ha2)
 ```
+
+
+```{r}
+library(ggplot2)
+ggplot(sta, aes(x = Region, y = Frost, fill = Region)) + 
+  geom_boxplot()+
+  geom_jitter(position=position_jitter(0.2))
+```
+
