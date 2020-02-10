@@ -1,0 +1,177 @@
+---
+title: "R Notebook"
+output: 
+  html_notebook:
+        number_sections: true
+---
+# Get ready
+```{r eval=FALSE}
+#Make sure you have a recent version of R and Rstudio
+install.packages("tidyverse")
+install.packages(c("plotly", "shiny", "shinyBS"))
+install.packages("ggfortify")
+install.packages("DataExplorer")
+install.packages("GGally")
+install.packages(c("VennDiagram","UpSetR") )
+install.packages("gganimate")
+install.packages("visNetwork")
+install.packages("BiocManager")
+BiocManager::install("ComplexHeatmap") 
+install.packages("kableExtra")
+```
+
+
+# Yes, I can do it!
+* Make it simple
+* No more than 6 types lines or markers
+* Some people are color blind
+* Do exploratory plots fast with default settings
+* Fine tune selected key plots for presentation
+* Use tidyverse and start tidying
+* There is an R package for everything!
+* Don't make me think!
+
+
+# The state data set
+## Data wrangling
+First take a look at the state data.
+
+```{r}
+state.x77 <- data.frame(state.x77)   
+sta <- cbind(state.abb, state.x77, state.region) #combine the three data sets
+colnames(sta)[1] <- "State"                #Rename first column
+colnames(sta)[10] <- "Region"              #Rename the 10th column
+sta$Pop.Density <- sta$Population/sta$Area
+head(sta) 
+```
+
+```{r}
+str(sta)
+```
+
+## Scatter plot
+Let's start with this scatterplot. Try to run the first line but without the "+" at the end. Then gradually add one line at a time without the "+" at the end and see the effect. You can select the lines and then press Ctrl+Enter to run. Things are done in steps and layers in ggplot2. That's where the "gg" comes from ( the Grammar of Graphics). 
+```{r, fig.height = 6, fig.width = 6, fig.align = "center"}
+library(ggplot2)
+ggplot(sta, aes(x = Illiteracy, y = Murder)) + 
+  geom_point(aes(size = Pop.Density, color = Region)) + 
+  geom_smooth(method = 'lm',formula = y ~ x) +  # add regression line
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ylim(c(0.5, 16)) +
+  xlim(c(0, 3)) +
+  ggtitle("Murder rate Vs Illiteracy") +
+  labs(y="Murders per 100,000", x="Illiteracy rate 1970", caption="Source: R") +
+  # guides(color=guide_legend("US Region"), size=guide_legend("Population Density")) +
+  guides(colour = guide_legend("US Region", order = 1), # change order
+         size = guide_legend("Pop. Density", order = 2)) + 
+  theme(legend.position="bottom", legend.box = "horizontal") + 
+  annotate("text",  x= 2.5, y = 2, label = paste("R=",round(cor(sta$Murder, sta$Illiteracy), 2)),hjust= 3) +
+  geom_text(aes(label=State),hjust=0, vjust=0)
+
+```
+
+This kind of layout also makes it easy to comment out one line at a time to see the effect. This is done with the first **guides** verb. Each line starts with a verb that adds or customize something on the plot. 
+
+**Challenge**  
+
+> Create a scatter plot to visualize the relationship between illiteracy rate and life expectancy. Color data points by region and vary the size of the data points according to income.   Note: Start building step by step. Copy the copy from above line by line. Change xlim and ylim. Change axis labels. Change the Pearson's correlation coefficient, and where it will appear on the plot using x, and y coordinates. 
+
+
+## Lollipop plot
+```{r, fig.height = 5, fig.width = 7}
+ggplot(sta, aes(x = State, y = Population)) +
+  geom_point( size=3, color="red", fill=alpha("orange", 0.3), alpha=0.5, shape=20, stroke=2) +
+  geom_segment(aes(x = State, xend = State, y = 0, yend = Population)) +
+  labs(title = "Lollipop Chart for Population") +
+#  coord_flip()  + 
+  theme( plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 90, vjust = 0.5)) 
+```
+
+**Challenge**
+
+> Try to see what happens by uncommenting the coord_flip line. And then create a lollipop plot for Frost (the number of days).
+
+
+## Density plot with ridgeline
+```{r}
+# install.packages("ggridges")
+library(ggridges)
+ggplot(sta, aes(x = Murder, y = Region, fill = Region)) +
+  geom_density_ridges() +
+  theme_ridges() + 
+  theme(legend.position = "none", 
+        plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_text(hjust = 0.5), 
+        axis.title.y = element_text(hjust = 0.5))
+```
+
+Notice that the last line is split into 3 lines, all indended nicely. 
+
+**Challenge** 
+
+> Use ridgeline plot to explore the regional distribution of Illiteracy for state.x77 and state.region data sets and interpret your figure.
+
+## Maps are also easy
+
+```{r }
+#install.packages(c("maps","mapproj"))
+library(ggplot2)
+library(maps)
+sta$region <- tolower(state.name)  # Create new character vector with lowercase states names
+states <- map_data("state")        # Extract state data
+map <- merge(states, sta, by = "region", all.x = T)  # Merge states and state.x77 data
+map <- map[order(map$order), ]
+ggplot(map, aes(x = long, y = lat, group = group)) +  
+  geom_polygon(aes(fill = Murder)) +   
+  geom_path() + 
+  scale_fill_gradientn(colours = rev(heat.colors(10))) +
+  coord_map() +
+  labs(x = "Longitude", y = "Latitude") +
+  guides(fill = guide_legend(title = "Murder Rate")) +  
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+**Challenge**
+
+> Similar to above, create a new code chuck below to use choropleth map to obtain the Illiteracy map in state.x77 data set and give a brief interpretation. Hint: You can combine state.abb to state.x77 or use the row names of state.x77 data set directly. 
+
+
+```{r}
+st <- sta[, 2:9] #take numeric variables as goal matrix
+# install.packages( c("ellipse", "corrplot") )
+library(ellipse)
+library(corrplot)
+corMatrix <- cor(as.matrix(st)) # Calculate correlation matrix
+col <- colorRampPalette(c("red", "yellow", "blue"))   #Color values. Red, yellow and blue represent that the coefficients are -1, 0 and 1 respectively. You can use more than 3 colors to represent the coefficients ranging from -1 to 1.
+corrplot.mixed(corMatrix, order = "AOE", lower = "number", lower.col = "black", 
+               number.cex = .8, upper = "ellipse",  upper.col = col(10), 
+               diag = "u", tl.pos = "lt", tl.col = "black") #Type ?corrplot.mixed in the Console to get help in detail.
+```
+
+```{r}
+plot(hclust(as.dist(1 - cor(as.matrix(st)))))  # hierarchical clustering
+```
+
+
+## Heat maps made easy with ComplexHeatmap
+```{r, fig.height = 10, fig.width = 6}
+library(ComplexHeatmap)
+st.matrix <- as.matrix(st) # transfer the data frame to matrix
+st.matrix <- apply(st.matrix, 2, function(y)(y - mean(y)) / sd(y))  # standardize data
+row_ha = rowAnnotation( Region = sta$Region)
+Heatmap(st.matrix, left_annotation = row_ha)
+```
+```{r, fig.height = 10, fig.width = 8}
+library(ComplexHeatmap)
+st.matrix <- as.matrix(st) # transfer the data frame to matrix
+st.matrix <- apply(st.matrix, 2, function(y)(y - mean(y)) / sd(y))  # standardize data
+row_ha <- rowAnnotation( Region = sta$Region, Murder = anno_barplot(sta$Murder))
+col_ha <- HeatmapAnnotation(Random = runif(8), foo = anno_density(st.matrix))
+Heatmap(st.matrix, 
+        left_annotation = row_ha, 
+        top_annotation = col_ha)
+```
+
+**Challenge**
+
+> Add a annotation to the right of the heat map. Using points to represents income for 50 states. Hint: Make another column annotation function and then use right_annotation

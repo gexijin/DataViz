@@ -1,0 +1,81 @@
+---
+title: "R Notebook"
+output: 
+  html_notebook:
+        number_sections: true
+---
+# Get ready
+```{r eval=FALSE}
+#Make sure you have a recent version of R and Rstudio
+install.packages("tidyverse")
+install.packages(c("plotly", "shiny", "shinyBS"))
+install.packages("ggfortify")
+install.packages("DataExplorer")
+install.packages("GGally")
+install.packages(c("VennDiagram","UpSetR") )
+install.packages("gganimate")
+install.packages("visNetwork")
+install.packages("BiocManager")
+BiocManager::install("ComplexHeatmap") 
+install.packages("kableExtra")
+```
+
+
+# Don't make me think!
+* Make it simple
+* No more than 6 types lines or markers
+* Some people are color blind
+* Do exploratory plots fast but fine tune selected plots for presentation.
+* Use tidyverse and start tidying
+
+# The state data set
+First take a look at the state data.
+
+```{r}
+state.x77 <- data.frame(state.x77)   
+sta <- cbind(state.abb, state.x77, state.region) #combine the three data sets
+colnames(sta)[1] <- "State"                #Rename first column
+colnames(sta)[10] <- "Region"              #Rename the 10th column
+sta$Pop.Density <- sta$Population/sta$Area
+head(sta) 
+```
+
+```{r}
+str(sta)
+```
+
+Let's start with this scatterplot. Try to run the first line but without the "+" at the end. Then gradually add one line at a time without the "+" at the end and see the effect. You can select the lines and then press Ctrl+Enter to run. Things are done in steps and layers in ggplot2. That's where the "gg" comes from ( the Grammar of Graphics). 
+```{r, fig.height = 6, fig.width = 8, fig.align = "center"}
+library(ggplot2)
+ggplot(sta, aes(x = Illiteracy, y = Life.Exp )) + 
+  geom_point(aes(size = Income, color = Region)) + 
+  geom_smooth(method = 'lm',formula = y ~ x) +  # add regression line
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("Life Expectancy Vs Illiteracy") +
+  labs(y="Life Expectancy", x="Illiteracy rate 1970", caption="Source: R") +
+  # guides(color=guide_legend("US Region"), size=guide_legend("Population Density")) +
+  guides(colour = guide_legend("US Region", order = 1), # change order
+         size = guide_legend("Income", order = 2)) + 
+ # theme(legend.position="bottom", legend.box = "horizontal") + 
+  annotate("text",  x= 3, y = 72, 
+           label = paste("R=",round(cor(sta$Life.Exp, sta$Illiteracy), 2)),
+           hjust= 3, vjust = -1) +
+  geom_text(aes(label=State),hjust=0, vjust=0)
+```
+
+
+
+```{r, fig.height = 10, fig.width = 8}
+library(ComplexHeatmap)
+st.matrix <- as.matrix(st) # transfer the data frame to matrix
+st.matrix <- apply(st.matrix, 2, function(y)(y - mean(y)) / sd(y))  # standardize data
+row_ha <- rowAnnotation( Region = sta$Region, Murder = anno_barplot(sta$Murder))
+row_ha2 <- rowAnnotation( Income = anno_points(sta$Income))
+col_ha <- HeatmapAnnotation( Random = runif(8), foo = anno_lines(runif(8)))
+col_ha2 <- HeatmapAnnotation(foo = anno_points(runif(8)))
+col_ha2 <- HeatmapAnnotation(Random = runif(8), foo = anno_density(st.matrix))
+Heatmap(st.matrix, 
+        left_annotation = row_ha, 
+        right_annotation = row_ha2,
+        top_annotation = col_ha2)
+```
