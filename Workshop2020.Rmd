@@ -1,9 +1,14 @@
 ---
 title: "Data visualization with R"
-output: 
+output:
   html_notebook:
-        number_sections: true
+    number_sections: yes
+  html_document:
+    df_print: paged
 ---
+
+For 3rd Data Science Symposium, at South Dakota State University. Feb 10, 2020
+
 # Get ready
 ```{r eval=FALSE}
 #Make sure you have a recent version of R and Rstudio
@@ -30,9 +35,19 @@ install.packages("kableExtra")
 * Use tidyverse and start tidying
 * There is an R package for everything!
 * Don't make me think!
+* Create a new project
+* Organize files.  See [here](https://dzone.com/articles/data-science-project-folder-structure)
+* Backup files in the Cloud
+* Use version control system such as GitHub.
+
+
 
 
 # The state data set
+
+## Start a R Notebook
+Go to File, New File , R NoteBook.  
+
 ## Data wrangling
 First take a look at the state data.
 
@@ -75,6 +90,24 @@ This kind of layout also makes it easy to comment out one line at a time to see 
 **Challenge**  
 
 > Create a scatter plot to visualize the relationship between illiteracy rate and life expectancy. Color data points by region and vary the size of the data points according to income.   Note: Start building step by step. Copy the copy from above line by line. Change xlim and ylim. Change axis labels. Change the Pearson's correlation coefficient, and where it will appear on the plot using x, and y coordinates. 
+
+```{r, fig.height = 6, fig.width = 8, fig.align = "center", echo = FALSE}
+library(ggplot2)
+ggplot(sta, aes(x = Illiteracy, y = Life.Exp )) + 
+  geom_point(aes(size = Income, color = Region)) + 
+  geom_smooth(method = 'lm',formula = y ~ x) +  # add regression line
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("Life Expectancy Vs Illiteracy") +
+  labs(y="Life Expectancy", x="Illiteracy rate 1970", caption="Source: R") +
+  # guides(color=guide_legend("US Region"), size=guide_legend("Population Density")) +
+  guides(colour = guide_legend("US Region", order = 1), # change order
+         size = guide_legend("Income", order = 2)) + 
+ # theme(legend.position="bottom", legend.box = "horizontal") + 
+  annotate("text",  x= 3, y = 72, 
+           label = paste("R=",round(cor(sta$Life.Exp, sta$Illiteracy), 2)),
+           hjust= 3, vjust = -1) +
+  geom_text(aes(label=State),hjust=0, vjust=0)
+```
 
 
 ## Lollipop plot
@@ -122,6 +155,19 @@ ggplot(sta, aes(x = Region, y = Frost)) +
 
 >  Change it to visualize income. Fill the plain boxplots with 4 different colors for the 4 boxes.
 
+```{r, echo = FALSE}
+library(ggplot2)
+ggplot(sta, aes(x = Region, y = Income, fill = Region)) + 
+  geom_boxplot()+
+  geom_jitter(position=position_jitter(0.2))
+```
+
+```{r, echo = FALSE}
+library(ggplot2)
+ggplot(sta, aes(x = Region, y = Illiteracy, fill = Region)) + 
+  geom_violin()+
+  geom_jitter(position=position_jitter(0.2))
+```
 
 ```{r}
 st <- sta[, 2:9] #take numeric variables as goal matrix
@@ -164,6 +210,18 @@ Heatmap(st.matrix,
 > Add a annotation to the right of the heat map. Using points to represents income for 50 states. Hint: Make another column annotation function and then use right_annotation
 
 
+```{r, fig.height = 10, fig.width = 8, echo = FALSE}
+library(ComplexHeatmap)
+st.matrix <- as.matrix(st) # transfer the data frame to matrix
+st.matrix <- apply(st.matrix, 2, function(y)(y - mean(y)) / sd(y))  # standardize data
+row_ha <- rowAnnotation( Region = sta$Region)
+row_ha2 <- rowAnnotation( Income = anno_points(sta$Income))
+col_ha2 <- HeatmapAnnotation(Distribution = anno_density(st.matrix))
+Heatmap(st.matrix, 
+        left_annotation = row_ha, 
+        right_annotation = row_ha2,
+        top_annotation = col_ha2)
+```
 
 ## Maps are also easy
 
@@ -175,7 +233,7 @@ sta$region <- tolower(state.name)  # Create new character vector with lowercase 
 states <- map_data("state")        # Extract state data
 map <- merge(states, sta, by = "region", all.x = T)  # Merge states and state.x77 data
 map <- map[order(map$order), ]
-ggplot(map, aes(x = long, y = lat, group = group)) +  
+p=ggplot(map, aes(x = long, y = lat, group = group)) +  
   geom_polygon(aes(fill = Murder)) +   
   geom_path() + 
   scale_fill_gradientn(colours = rev(heat.colors(10))) +
@@ -201,6 +259,147 @@ p <- ggplot(sta, aes(x = Illiteracy, y = Murder)) +
   annotate("text",  x= 2.5, y = 2, 
            label = paste("R=",round(cor(sta$Murder, sta$Illiteracy), 2))) 
 
-ggplotly(p, )
+ggplotly(p)
+```
+
+
+
+**Challenge**
+
+> Create this interactive plot using the Iris dataset (iris). You can change the hover text using the toolpit option for ggplotly. See this [page](https://stackoverflow.com/questions/34605919/formatting-mouse-over-labels-in-plotly-when-using-ggplotly).
+
+
+
+```{r, echo = FALSE}
+p <- ggplot(iris, aes(x = Petal.Width, 
+                      y = Sepal.Length, 
+                      color = Species,
+                      text = paste("PL=", Petal.Length, ", SW=",Sepal.Width)) ) + 
+  labs( x = "Petal Width (cm)", y = "Sepal Length (cm)") +
+  geom_point() +
+  annotate("text", x = 2, y = 4, 
+           label = paste("R=", round(cor(iris$Petal.Width, iris$Sepal.Length), 1)) ) + 
+    geom_point(aes(Petal.Width = Petal.Width, Species = Species), colour = "red", alpha = 1/2)
+  
+ggplotly(p, tooltip = "text")
+```
+
+
+## Interactive maps
+```{r}
+data(canada.cities, package = "maps")
+viz <- ggplot(canada.cities, aes(long, lat)) +
+  borders(regions = "canada") +
+  coord_equal() +
+  geom_point(aes(text = name, size = pop), colour = "red", alpha = 1/2)
+ggplotly(viz, tooltip = c("text", "size"))
+```
+
+
+
+
+# The heart attack dataset
+
+```{r}
+df <- read.table("http://statland.org/R/RC/heartatk4R.txt", 
+                         header = TRUE, 
+                         sep = "\t", 
+                         colClasses = c("character", "factor", "factor", "factor", 
+                                        "factor", "numeric", "numeric", "numeric"))
+str(df)
+
+```
+
+
+```{r}
+ggplot(df, aes(x = AGE, fill = SEX)) + 
+       geom_density(alpha = 0.3) + facet_grid(DRG ~.)  # Figure 5.4C
+```
+
+## DataExplorer automates E.D.A.
+
+```{r}
+library(DataExplorer)
+introduce(df)
+```
+
+```{r}
+plot_intro(df)
+```
+
+```{r}
+plot_missing(df)
+```
+
+
+```{r}
+plot_qq(df, by="DRG", sampled_rows = 1000L)
+```
+
+
+```{r}
+plot_boxplot(df, by = "DIAGNOSIS")
+```
+
+
+
+```{r}
+library(GGally)
+ggpairs(sta[, 2:6])
+```
+
+
+# Venn Diagrams and upset plots
+
+```{r}
+table(df$SEX, df$DIED)
+```
+```{r}
+table(df$SEX)
+```
+```{r}
+table(df$DIED)
+```
+
+
+```{r}
+library(VennDiagram)
+grid.newpage()
+draw.pairwise.venn( nrow(subset(df, SEX == "F")), 
+                    nrow(subset(df, DIED == "1")), 
+                    nrow(subset(df, SEX == "F" & DIED == "1")), 
+                    category = c("Women", "Died"), 
+                    lty = rep("blank",2), 
+                    fill = c("light blue", "pink"), 
+                    alpha = rep(0.5, 2), 
+                    cat.pos = c(0,  0), 
+                    cat.dist = rep(0.025, 2), 
+                    scaled = FALSE)
+
+```
+```{r}
+movies = read.csv(system.file("extdata", "movies.csv", package = "UpSetR"), 
+    header = TRUE, sep = ";")
+head(movies)
+```
+
+```{r}
+m = make_comb_mat(movies, top_n_sets = 6, remove_complement_set = TRUE)
+UpSet(m)
+```
+
+
+# visNetwork 
+
+```{r}
+library(visNetwork)
+nodes <- data.frame(id = 1:7)
+
+edges <- data.frame(
+  from = c(1,2,2,2,3,3),
+  to = c(2,3,4,5,6,7)
+)
+visNetwork(nodes, edges, width = "100%") %>% 
+  visEdges(arrows = "from") 
 ```
 
