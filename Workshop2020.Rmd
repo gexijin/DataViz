@@ -10,6 +10,8 @@ output:
 For 3rd Data Science Symposium, at South Dakota State University. Feb 10, 2020
 
 # Get ready
+
+## Install libraries. Note that ComplexHeatmap is a Bioconductor package.
 ```{r eval=FALSE}
 #Make sure you have a recent version of R and Rstudio
 install.packages("tidyverse")
@@ -25,6 +27,10 @@ BiocManager::install("ComplexHeatmap")
 install.packages("kableExtra")
 ```
 
+## Get the files
+
+Visit the [Github](https://github.com/gexijin/DataViz) repository, downlod the entire thing as a Zip file and unzip to a folder. 
+Then click on the file named Workshop2020.html
 
 # Yes, I can do it!
 * Make it simple
