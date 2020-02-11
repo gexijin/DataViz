@@ -11,41 +11,23 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## An example of using Shiny in an R Markdown document.
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+We can embed interactive contents with control widgets in R Markdown documents by including Shiny Apps. Note this needs the runtime: shiny at the 7th line above.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
-
-
-
+## Prepare data
 ```{r}
+library(ggplot2)
 state.x77 <- data.frame(state.x77)   
-sta <- cbind(state.abb, state.x77, state.region) #combine the three data sets
-colnames(sta)[1] <- "State"                #Rename first column
-colnames(sta)[10] <- "Region"              #Rename the 10th column
+sta <- cbind(state.abb, state.x77, state.region) 
+colnames(sta)[1] <- "State"               
+colnames(sta)[10] <- "Region"              
 sta$Pop.Density <- sta$Population/sta$Area
-head(sta) 
 ```
 
+## This is the first example provided
 
-# More activity by embedding Shiny apps
-
-Note this needs the runtime: shiny at the very beginning. Notice the $input$myCol that specifies the column, and the **aes_string**, instead of just aes, and "Region" instead of Region.
+ Notice the $input$myCol that specifies the column, and the **aes_string**, instead of just aes, and "Region" instead of Region.
 
 ```{r, echo = FALSE}
 library(ggridges)
@@ -66,4 +48,46 @@ ggplot(sta, aes_string(x = input$myCol, y = "Region", fill = "Region")) +
 })
 ```
 
+## This is the challenge code that I was having trouble with
 
+One plot shows up, but we cannot control it!!!
+```{r, echo = FALSE}
+selectInput("myCol", "Choose a column", choices = colnames(sta)[2:11])
+
+renderPlot({
+  ggplot(sta, aes_string( x = input$myCol) ) + 
+    geom_histogram()
+})
+```
+
+
+**It is actually being control by the botton in the first app!** Try to switch the first app and both changes! 
+If you want both of them control by one widgets, that's fine. But if you want indepedent control. We need to rename the widget to **"myCol2"**. 
+
+## Name the control widgets from myCol to myCol2 and it works
+```{r, echo = FALSE}
+selectInput("myCol2", "Choose a column", choices = colnames(sta)[2:11])
+
+renderPlot({
+  ggplot(sta, aes_string( x = input$myCol2) ) + 
+    geom_histogram()
+})
+```
+
+
+## Another example
+We are re-cycling our boxplot code in the main workshop document. 
+```{r, echo = FALSE}
+selectInput("myCol3", "Choose a column", choices = colnames(sta)[2:11])
+
+renderPlot({
+  ggplot(sta, aes_string( x = "Region", y = input$myCol3, fill = "Region") ) +
+    geom_boxplot() +
+      geom_jitter(position=position_jitter(0.2))
+  
+})
+```
+
+
+
+# Told ya it is easy!
